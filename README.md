@@ -90,6 +90,53 @@ current_time_tool = client.tools.add_mcp_tool(
 )
 ```
 
+## 最新更新进度
+
+### 国内大模型集成已完成
+- [x] 成功集成 Kimi (月之暗面) 和 Zhipu AI (智谱AI) 模型
+- [x] 实现完整的模型列表获取功能，支持所有 Kimi 和 Zhipu 模型
+- [x] 修复了模型在前端不显示的问题，确保 API 正确返回模型列表
+- [x] 优化了模型配置，支持通过 .env 文件灵活配置 API 密钥
+
+### 启动指令优化
+为方便用户使用，项目提供了多种启动方式：
+
+1. **一键启动脚本**（推荐）：
+   ```bash
+   # Windows 用户
+   start.bat
+   
+   # Linux/macOS 用户
+   ./start.sh
+   ```
+
+2. **手动启动后端服务**：
+   ```bash
+   # 启动后端服务器（带热重载）
+   uv run letta server --type rest --port 8283 --reload
+   
+   # 或者不带热重载（生产环境）
+   uv run letta server --type rest --port 8283
+   ```
+
+3. **启动前端开发服务器**：
+   ```bash
+   # 进入前端目录并启动开发服务器
+   cd frontend
+   npm run dev
+   ```
+
+4. **生产环境部署**：
+   ```bash
+   # 构建前端应用
+   cd frontend
+   npm run build
+   
+   # 启动生产服务器
+   cd ..
+   uv run letta server --type rest --port 8283
+   ```
+
 ## 开发计划
 
 ### 第一阶段：国内模型兼容性增强 (1-2周)

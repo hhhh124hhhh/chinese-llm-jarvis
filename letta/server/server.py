@@ -66,12 +66,15 @@ from letta.schemas.providers import (
     GroqProvider,
     LettaProvider,
     LMStudioOpenAIProvider,
+    MistralProvider,
     OllamaProvider,
     OpenAIProvider,
     Provider,
     TogetherProvider,
     VLLMProvider,
     XAIProvider,
+    KimiProvider,
+    ZhipuProvider,
 )
 from letta.schemas.sandbox_config import LocalSandboxConfig, SandboxConfigCreate
 from letta.schemas.source import Source
@@ -180,7 +183,7 @@ class SyncServer(Server):
         self,
         chaining: bool = True,
         max_chaining_steps: Optional[int] = 100,
-        default_interface_factory: Callable[[], AgentChunkStreamingInterface] = lambda: CLIInterface(),
+        default_interface_factory: Callable[[], AgentInterface] = lambda: CLIInterface(),
         init_with_default_org_and_user: bool = True,
         # default_interface: AgentInterface = CLIInterface(),
         # default_persistence_manager_cls: PersistenceManager = LocalStateManager,
@@ -197,207 +200,306 @@ class SyncServer(Server):
         # The default interface that will get assigned to agents ON LOAD
         self.default_interface_factory = default_interface_factory
 
-        # Initialize the metadata store
-        config = LettaConfig.load()
-        if settings.database_engine is DatabaseChoice.POSTGRES:
-            config.recall_storage_type = "postgres"
-            config.recall_storage_uri = settings.letta_pg_uri_no_default
-            config.archival_storage_type = "postgres"
-            config.archival_storage_uri = settings.letta_pg_uri_no_default
-        config.save()
-        self.config = config
-
-        # Managers that interface with data models
+        # Initialize the ORM manager
         self.organization_manager = OrganizationManager()
-        self.passage_manager = PassageManager()
         self.user_manager = UserManager()
         self.tool_manager = ToolManager()
-        self.mcp_manager = MCPManager()
-        self.block_manager = BlockManager()
         self.source_manager = SourceManager()
-        self.sandbox_config_manager = SandboxConfigManager()
-        self.message_manager = MessageManager()
-        self.job_manager = JobManager()
         self.agent_manager = AgentManager()
-        self.archive_manager = ArchiveManager()
-        self.provider_manager = ProviderManager()
-        self.step_manager = StepManager()
-        self.identity_manager = IdentityManager()
-        self.group_manager = GroupManager()
-        self.batch_manager = LLMBatchManager()
-        self.telemetry_manager = TelemetryManager()
-        self.file_agent_manager = FileAgentManager()
+        self.message_manager = MessageManager()
+        self.passage_manager = PassageManager()
         self.file_manager = FileManager()
-
+        self.file_agent_manager = FileAgentManager()
+        self.sandbox_config_manager = SandboxConfigManager()
+        self.provider_manager = ProviderManager()
+        self.block_manager = BlockManager()
+        self.mcp_manager = MCPManager()
+        self.job_manager = JobManager()
+        self.step_manager = StepManager()
+        self.group_manager = GroupManager()
+        self.archive_manager = ArchiveManager()
+        self.identity_manager = IdentityManager()
+        self.llm_batch_manager = LLMBatchManager()
+        self.telemetry_manager = TelemetryManager()
+        
+        # Initialize the agent serialization manager after all dependencies are initialized
         self.agent_serialization_manager = AgentSerializationManager(
+            tool_manager=self.tool_manager, 
+            source_manager=self.source_manager, 
             agent_manager=self.agent_manager,
-            tool_manager=self.tool_manager,
-            source_manager=self.source_manager,
             block_manager=self.block_manager,
             group_manager=self.group_manager,
             mcp_manager=self.mcp_manager,
             file_manager=self.file_manager,
             file_agent_manager=self.file_agent_manager,
-            message_manager=self.message_manager,
+            message_manager=self.message_manager
         )
 
-        # A resusable httpx client
-        timeout = httpx.Timeout(connect=10.0, read=20.0, write=10.0, pool=10.0)
-        limits = httpx.Limits(max_connections=100, max_keepalive_connections=80, keepalive_expiry=300)
-        self.httpx_client = httpx.AsyncClient(timeout=timeout, follow_redirects=True, limits=limits)
-
-        # Make default user and org
-        if init_with_default_org_and_user:
-            self.default_org = self.organization_manager.create_default_organization()
-            self.default_user = self.user_manager.create_default_user()
-            self.tool_manager.upsert_base_tools(actor=self.default_user)
-
-            # Add composio keys to the tool sandbox env vars of the org
-            if tool_settings.composio_api_key:
-                manager = SandboxConfigManager()
-                sandbox_config = manager.get_or_create_default_sandbox_config(sandbox_type=SandboxType.LOCAL, actor=self.default_user)
-
-                manager.create_sandbox_env_var(
-                    SandboxEnvironmentVariableCreate(key="COMPOSIO_API_KEY", value=tool_settings.composio_api_key),
-                    sandbox_config_id=sandbox_config.id,
-                    actor=self.default_user,
-                )
-
-            # For OSS users, create a local sandbox config
-            oss_default_user = self.user_manager.get_default_user()
-            use_venv = False if not tool_settings.tool_exec_venv_name else True
-            venv_name = tool_settings.tool_exec_venv_name or "venv"
-            tool_dir = tool_settings.tool_exec_dir or LETTA_TOOL_EXECUTION_DIR
-
-            venv_dir = Path(tool_dir) / venv_name
-            tool_path = Path(tool_dir)
-
-            if tool_path.exists() and not tool_path.is_dir():
-                logger.error(f"LETTA_TOOL_SANDBOX_DIR exists but is not a directory: {tool_dir}")
-            else:
-                if not tool_path.exists():
-                    logger.warning(f"LETTA_TOOL_SANDBOX_DIR does not exist, creating now: {tool_dir}")
-                    tool_path.mkdir(parents=True, exist_ok=True)
-
-                if tool_settings.tool_exec_venv_name and not venv_dir.is_dir():
-                    logger.warning(
-                        f"Provided LETTA_TOOL_SANDBOX_VENV_NAME is not a valid venv ({venv_dir}), one will be created for you during tool execution."
-                    )
-
-                sandbox_config_create = SandboxConfigCreate(
-                    config=LocalSandboxConfig(sandbox_dir=tool_settings.tool_exec_dir, use_venv=use_venv, venv_name=venv_name)
-                )
-                sandbox_config = self.sandbox_config_manager.create_or_update_sandbox_config(
-                    sandbox_config_create=sandbox_config_create, actor=oss_default_user
-                )
-                logger.info(f"Successfully created default local sandbox config:\n{sandbox_config.get_local_config().model_dump()}")
-
-                if use_venv and tool_settings.tool_exec_autoreload_venv:
-                    prepare_local_sandbox(
-                        sandbox_config.get_local_config(),
-                        env=os.environ.copy(),
-                        force_recreate=True,
-                    )
+        # Managers that depend on the managers above
+        self.tool_execution_manager = ToolExecutionManager(
+            message_manager=self.message_manager,
+            agent_manager=self.agent_manager,
+            block_manager=self.block_manager,
+            job_manager=self.job_manager,
+            passage_manager=self.passage_manager,
+            actor=None  # Will be set when needed
+        )
 
         # collect providers (always has Letta as a default)
-        self._enabled_providers: List[Provider] = [LettaProvider(name="letta")]
-        if model_settings.openai_api_key:
+        self._enabled_providers: List[Provider] = [LettaProvider(name="letta", provider_type=ProviderType.letta, provider_category=ProviderCategory.base, id=None, api_key=None, base_url=None, access_key=None, region=None, api_version=None, organization_id=None, updated_at=None)]
+        
+        # Check if providers are disabled via environment variables before initializing them
+        if not os.getenv("LETTA_DISABLE_OPENAI_PROVIDER") and model_settings.openai_api_key:
             self._enabled_providers.append(
                 OpenAIProvider(
                     name="openai",
+                    provider_type=ProviderType.openai,
+                    provider_category=ProviderCategory.base,
                     api_key=model_settings.openai_api_key,
-                    base_url=model_settings.openai_api_base,
+                    base_url=model_settings.openai_api_base or "https://api.openai.com/v1",
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.anthropic_api_key:
+        if not os.getenv("LETTA_DISABLE_ANTHROPIC_PROVIDER") and model_settings.anthropic_api_key:
             self._enabled_providers.append(
                 AnthropicProvider(
                     name="anthropic",
+                    provider_type=ProviderType.anthropic,
+                    provider_category=ProviderCategory.base,
                     api_key=model_settings.anthropic_api_key,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.ollama_base_url:
+        if not os.getenv("LETTA_DISABLE_OLLAMA_PROVIDER") and model_settings.ollama_base_url:
             self._enabled_providers.append(
                 OllamaProvider(
                     name="ollama",
+                    provider_type=ProviderType.ollama,
+                    provider_category=ProviderCategory.base,
                     base_url=model_settings.ollama_base_url,
                     api_key=None,
                     default_prompt_formatter=model_settings.default_prompt_formatter,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.gemini_api_key:
+        if not os.getenv("LETTA_DISABLE_GOOGLE_AI_PROVIDER") and model_settings.gemini_api_key:
             self._enabled_providers.append(
                 GoogleAIProvider(
                     name="google_ai",
+                    provider_type=ProviderType.google_ai,
+                    provider_category=ProviderCategory.base,
                     api_key=model_settings.gemini_api_key,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.google_cloud_location and model_settings.google_cloud_project:
+        if (not os.getenv("LETTA_DISABLE_GOOGLE_VERTEX_PROVIDER") and 
+            model_settings.google_cloud_location and 
+            model_settings.google_cloud_project):
             self._enabled_providers.append(
                 GoogleVertexProvider(
                     name="google_vertex",
+                    provider_type=ProviderType.google_vertex,
+                    provider_category=ProviderCategory.base,
                     google_cloud_project=model_settings.google_cloud_project,
                     google_cloud_location=model_settings.google_cloud_location,
+                    api_key=model_settings.gemini_api_key,
+                    base_url=model_settings.gemini_base_url,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.azure_api_key and model_settings.azure_base_url:
-            assert model_settings.azure_api_version, "AZURE_API_VERSION is required"
-            self._enabled_providers.append(
-                AzureProvider(
-                    name="azure",
-                    api_key=model_settings.azure_api_key,
-                    base_url=model_settings.azure_base_url,
-                    api_version=model_settings.azure_api_version,
-                )
-            )
-        if model_settings.groq_api_key:
+        if not os.getenv("LETTA_DISABLE_GROQ_PROVIDER") and model_settings.groq_api_key:
             self._enabled_providers.append(
                 GroqProvider(
                     name="groq",
+                    provider_type=ProviderType.groq,
+                    provider_category=ProviderCategory.base,
                     api_key=model_settings.groq_api_key,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.together_api_key:
+        if not os.getenv("LETTA_DISABLE_AZURE_PROVIDER") and model_settings.azure_api_key:
             self._enabled_providers.append(
-                TogetherProvider(
-                    name="together",
-                    api_key=model_settings.together_api_key,
-                    default_prompt_formatter=model_settings.default_prompt_formatter,
+                AzureProvider(
+                    name="azure",
+                    provider_type=ProviderType.azure,
+                    provider_category=ProviderCategory.base,
+                    api_key=model_settings.azure_api_key,
+                    base_url=model_settings.azure_base_url or "",
+                    api_version=model_settings.azure_api_version or "2024-09-01-preview",
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
-        if model_settings.vllm_api_base:
-            # vLLM exposes both a /chat/completions and a /completions endpoint
-            # NOTE: to use the /chat/completions endpoint, you need to specify extra flags on vLLM startup
-            # see: https://docs.vllm.ai/en/stable/features/tool_calling.html
-            # e.g. "... --enable-auto-tool-choice --tool-call-parser hermes"
-            self._enabled_providers.append(
-                VLLMProvider(
-                    name="vllm",
-                    base_url=model_settings.vllm_api_base,
-                    default_prompt_formatter=model_settings.default_prompt_formatter,
-                )
-            )
-
-        if model_settings.aws_access_key_id and model_settings.aws_secret_access_key and model_settings.aws_default_region:
+        if not os.getenv("LETTA_DISABLE_BEDROCK_PROVIDER") and model_settings.aws_access_key_id and model_settings.aws_secret_access_key and model_settings.aws_default_region:
             self._enabled_providers.append(
                 BedrockProvider(
                     name="bedrock",
+                    provider_type=ProviderType.bedrock,
+                    provider_category=ProviderCategory.base,
                     region=model_settings.aws_default_region,
+                    access_key=model_settings.aws_access_key_id,
+                    api_key=model_settings.aws_secret_access_key,
+                    id=None,
+                    base_url=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
                 )
             )
         # Attempt to enable LM Studio by default
-        if model_settings.lmstudio_base_url:
+        if not os.getenv("LETTA_DISABLE_LMSTUDIO_OPENAI_PROVIDER") and model_settings.lmstudio_base_url:
             # Auto-append v1 to the base URL
             lmstudio_url = (
                 model_settings.lmstudio_base_url
                 if model_settings.lmstudio_base_url.endswith("/v1")
                 else model_settings.lmstudio_base_url + "/v1"
             )
-            self._enabled_providers.append(LMStudioOpenAIProvider(name="lmstudio_openai", base_url=lmstudio_url))
-        if model_settings.deepseek_api_key:
-            self._enabled_providers.append(DeepSeekProvider(name="deepseek", api_key=model_settings.deepseek_api_key))
-        if model_settings.xai_api_key:
-            self._enabled_providers.append(XAIProvider(name="xai", api_key=model_settings.xai_api_key))
+            self._enabled_providers.append(LMStudioOpenAIProvider(
+                name="lmstudio_openai",
+                provider_type=ProviderType.lmstudio_openai,
+                provider_category=ProviderCategory.base,
+                base_url=lmstudio_url,
+                api_key=None,
+                id=None,
+                access_key=None,
+                region=None,
+                api_version=None,
+                organization_id=None,
+                updated_at=None
+            ))
+        if not os.getenv("LETTA_DISABLE_DEEPSEEK_PROVIDER") and model_settings.deepseek_api_key:
+            self._enabled_providers.append(
+                DeepSeekProvider(
+                    name="deepseek",
+                    provider_type=ProviderType.deepseek,
+                    provider_category=ProviderCategory.base,
+                    api_key=model_settings.deepseek_api_key,
+                    base_url="https://api.deepseek.com/v1",
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
+                )
+            )
+        if not os.getenv("LETTA_DISABLE_XAI_PROVIDER") and model_settings.xai_api_key:
+            self._enabled_providers.append(
+                XAIProvider(
+                    name="xai",
+                    provider_type=ProviderType.xai,
+                    provider_category=ProviderCategory.base,
+                    api_key=model_settings.xai_api_key,
+                    base_url="https://api.x.ai/v1",
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
+                )
+            )
+        if not os.getenv("LETTA_DISABLE_TOGETHER_PROVIDER") and model_settings.together_api_key:
+            self._enabled_providers.append(
+                TogetherProvider(
+                    name="together",
+                    provider_type=ProviderType.together,
+                    provider_category=ProviderCategory.base,
+                    api_key=model_settings.together_api_key,
+                    default_prompt_formatter=model_settings.default_prompt_formatter,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
+                )
+            )
+        if not os.getenv("LETTA_DISABLE_VLLM_PROVIDER") and model_settings.vllm_api_base:
+            self._enabled_providers.append(
+                VLLMProvider(
+                    name="vllm",
+                    provider_type=ProviderType.vllm,
+                    provider_category=ProviderCategory.base,
+                    base_url=model_settings.vllm_api_base,
+                    id=None,
+                    api_key=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
+                )
+            )
+
+        # Add Kimi (Moonshot AI) provider if API key is configured and not disabled
+        if not os.getenv("LETTA_DISABLE_KIMI_PROVIDER") and model_settings.kimi_api_key:
+            self._enabled_providers.append(
+                KimiProvider(
+                    name="kimi",
+                    provider_type=ProviderType.kimi,
+                    provider_category=ProviderCategory.base,
+                    api_key=model_settings.kimi_api_key,
+                    base_url=model_settings.kimi_base_url,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
+                )
+            )
+        
+        # Add Zhipu AI (智谱AI) provider if API key is configured and not disabled
+        if not os.getenv("LETTA_DISABLE_ZHIPU_PROVIDER") and model_settings.zhipu_api_key:
+            self._enabled_providers.append(
+                ZhipuProvider(
+                    name="zhipu",
+                    provider_type=ProviderType.zhipu,
+                    provider_category=ProviderCategory.base,
+                    api_key=model_settings.zhipu_api_key,
+                    base_url=model_settings.zhipu_base_url,
+                    id=None,
+                    access_key=None,
+                    region=None,
+                    api_version=None,
+                    organization_id=None,
+                    updated_at=None
+                )
+            )
 
         # For MCP
         # TODO: remove this
@@ -1943,6 +2045,16 @@ class SyncServer(Server):
                 function_args=tool_args,
                 tool=tool,
             )
+        # Managers that depend on the managers above
+        self.tool_execution_manager = ToolExecutionManager(
+            message_manager=self.message_manager,
+            agent_manager=self.agent_manager,
+            block_manager=self.block_manager,
+            job_manager=self.job_manager,
+            passage_manager=self.passage_manager,
+            actor=None  # Will be set when needed
+        )
+
             return ToolReturnMessage(
                 id="null",
                 tool_call_id="null",
