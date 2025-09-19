@@ -202,612 +202,103 @@ alembic revision --autogenerate -m "描述"
 ┌─────────────────────────────────────────────────────────────────┐
 │                        记忆接口层                                │
 ├─────────────────────────────────────────────────────────────────┤
-│                    MemoryManager                                │
-│                (记忆管理器)                                      │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-    ┌─────────────────────────┬─────────────────────────┐
-    │                         │                         │
-┌─────────────┐      ┌──────────────┐      ┌─────────────────┐
-│ 核心记忆     │      │ 档案记忆      │      │ 上下文记忆        │
-│ (Core)      │      │ (Archival)   │      │ (Context)       │
-├─────────────┤      ├──────────────┤      ├─────────────────┤
-│ • Block     │      │ • Passage    │      │ • Message IDs   │
-│ • 持久存储   │      │ • 向量索引    │      │ • 对话历史       │
-│ • 快速访问   │      │ • 语义检索    │      │ • 动态上下文       │
-│ • 手动管理   │      │ • 自动管理    │      │ • 自动清理        │
-└─────────────┘      └──────────────┘      └─────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                        记忆操作层                                │
-├──────────────────┬──────────────────┬────────────────────────────┤
-│   搜索工具       │   更新工具        │   管理工具                │
-│  (search)       │  (update)        │  (management)             │
-├──────────────────┼──────────────────┼────────────────────────────┤
-│   语义搜索       │   插入/替换       │   创建/删除               │
-│   关键词匹配     │   追加/删除       │   权限管理               │
-│   相似度计算     │   批量操作        │   版本控制               │
-└──────────────────┴──────────────────┴────────────────────────────┘
-```
-
-### 5. 多代理系统架构
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        多代理协调层                              │
-├─────────────────────────────────────────────────────────────────┤
-│                    MultiAgentSystem                             │
-│                (多代理系统协调器)                                │
+│                Memory / MemoryManager                           │
+│                (记忆管理接口)                                    │
 └─────────────────────────────────────────────────────────────────┘
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
-│                        协作模式层                                │
+│                        记忆实现层                                │
 ├──────────────────┬──────────────────┬────────────────────────────┤
-│  RoundRobin      │   Dynamic        │   Supervisor              │
-│  (轮询模式)      │   (动态模式)      │   (监督模式)              │
+│   CoreMemory     │   ArchivalMemory │   RecallMemory           │
+│   (核心记忆)     │   (档案记忆)      │   (回忆记忆)              │
 ├──────────────────┼──────────────────┼────────────────────────────┤
-│  Sleeptime       │   Voice          │   Workflow               │
-│  (睡眠模式)      │   (语音模式)      │   (工作流模式)            │
+│   MemoryBlock    │   BlockManager   │   MemorySearch           │
+│   (记忆块)       │   (块管理器)      │   (记忆搜索)              │
 └──────────────────┴──────────────────┴────────────────────────────┘
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
-│                        通信机制层                                │
-├─────────────────────────────────────────────────────────────────┤
-│                  MessageBus                                     │
-│                (消息总线)                                        │
-├─────────────────────────────────────────────────────────────────┤
-│  消息路由  →  消息队列  →  广播机制  →  状态同步                  │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                        共享资源层                                │
+│                        存储抽象层                                │
 ├──────────────────┬──────────────────┬────────────────────────────┤
-│   SharedBlocks   │   SharedTools    │   SharedContext           │
-│   (共享记忆)     │   (共享工具)      │   (共享上下文)            │
+│   Embedding      │   VectorStore    │   Persistence            │
+│   (嵌入编码)     │   (向量存储)      │   (持久化)                │
 ├──────────────────┼──────────────────┼────────────────────────────┤
-│   共享记忆块     │   共享工具集      │   全局状态                │
-│   权限控制       │   工具调度        │   事件通知                │
-│   版本管理       │   执行隔离        │   冲突解决                │
+│   Serializer     │   Compressor     │   Summarizer             │
+│   (序列化)       │   (压缩器)        │   (摘要器)                │
 └──────────────────┴──────────────────┴────────────────────────────┘
 ```
 
-### 6. 数据流架构
-
-```
-用户输入 → API层 → 业务逻辑层 → 核心执行层 → 外部服务层
-    ↓         ↓         ↓         ↓         ↓
-[请求验证] → [权限检查] → [代理创建] → [上下文构建] → [LLM调用]
-                                    ↓
-[工具解析] → [工具执行] → [结果处理] → [记忆更新] → [响应生成]
-    ↓         ↓         ↓         ↓         ↓
-[返回响应] ← [格式化输出] ← [状态保存] ← [清理资源] ← [日志记录]
-```
-
-### 7. 模块依赖关系图
-
-```
-                    ┌─────────────────┐
-                    │   Settings      │
-                    │   (配置管理)     │
-                    └─────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-┌───────▼───────┐ ┌────────▼────────┐ ┌────────▼────────┐
-│   ORM Models  │ │  Services       │ │   LLM Clients    │
-│   (数据模型)   │ │  (业务逻辑)     │ │   (LLM接口)      │
-└───────┬───────┘ └────────┬────────┘ └────────┬────────┘
-        │                   │                   │
-        └───────────────────┼───────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-┌───────▼───────┐ ┌────────▼────────┐ ┌────────▼────────┐
-│   Agents      │ │   ToolExecutor  │ │  Memory System   │
-│   (代理系统)   │ │   (工具执行)     │ │   (记忆系统)      │
-└───────┬───────┘ └────────┬────────┘ └────────┬────────┘
-        │                   │                   │
-        └───────────────────┼───────────────────┘
-                            │
-                    ┌───────▼───────┐
-                    │   Server API  │
-                    │   (API接口)    │
-                    └───────────────┘
-```
-
-### 8. 关键设计模式
-
-#### 8.1 管理器模式
-```python
-# 每个核心实体都有对应的管理器
-class AgentManager:
-    def create_agent(self, ...) -> Agent
-    def get_agent(self, id: str) -> Agent
-    def update_agent(self, id: str, ...) -> Agent
-    def delete_agent(self, id: str) -> bool
-```
-
-#### 8.2 工厂模式
-```python
-# 动态创建不同类型的执行器
-class ToolExecutorFactory:
-    @staticmethod
-    def create_executor(tool_type: str) -> ToolExecutor:
-        if tool_type == "core":
-            return LettaCoreToolExecutor()
-        elif tool_type == "sandbox":
-            return SandboxToolExecutor()
-```
-
-#### 8.3 观察者模式
-```python
-# 事件驱动的消息处理
-class EventEmitter:
-    def emit(self, event: str, data: Any)
-    def on(self, event: str, callback: Callable)
-    def off(self, event: str, callback: Callable)
-```
-
-### 9. 性能优化策略
-
-#### 9.1 异步处理
-- 所有管理器支持异步操作
-- 使用asyncio进行并发处理
-- 数据库连接池管理
-
-#### 9.2 缓存机制
-- Redis缓存热点数据
-- 内存缓存频繁访问对象
-- 智能缓存失效策略
-
-#### 9.3 批量操作
-- 支持批量创建/更新操作
-- 数据库批量写入优化
-- 工具批量执行支持
-
-### 10. 扩展性设计
-
-#### 10.1 插件系统
-- 工具插件接口
-- 执行器插件机制
-- 自定义LLM提供商支持
-
-#### 10.2 配置驱动
-- 环境变量配置
-- 数据库配置管理
-- 动态配置加载
-
-#### 10.3 多租户支持
-- 组织和项目管理
-- 权限隔离机制
-- 资源配额控制
-
-## 技术框架与核心特色
-
-### 技术栈分析
-
-Letta基于现代Python技术栈构建，具有以下技术特点：
-
-#### 核心技术组件
-- **Web框架**: FastAPI + Uvicorn/Granian（高性能异步服务器）
-- **数据库**: SQLAlchemy 2.0 + Alembic（支持PostgreSQL、SQLite、Redis）
-- **ORM系统**: 自建SQLAlchemy ORM，支持异步操作
-- **LLM集成**: 多提供商统一接口（OpenAI、Anthropic、Google、Azure、Bedrock等）
-- **向量数据库**: Pinecone、TPUF、SQLite-Vec（混合向量存储）
-- **工作流引擎**: Temporal（分布式任务处理）
-- **消息队列**: APScheduler（任务调度）
-
-#### 特色依赖
-- `temporalio>=1.8.0` - 分布式工作流引擎
-- `llama-index>=0.12.2` - RAG框架集成
-- `sqlite-vec>=0.1.7a2` - 本地向量存储
-- `composio-core>=0.7.7` - 工具集成框架
-- `structlog>=25.4.0` - 结构化日志
-
-### Letta的核心特色：记忆系统
-
-Letta源自著名的MemGPT（Memory GPT）研究项目，其最核心的特色是**三层记忆架构**，解决了LLM的长期记忆问题。
-
-#### 三层记忆架构
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        记忆系统架构                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   核心记忆      │  │   回忆记忆      │  │   档案记忆      │ │
-│  │  (Core Memory)  │  │ (Recall Memory) │  │(Archival Memory)│ │
-│  │                 │  │                 │  │                 │ │
-│  │ • 内存块结构     │  │ • 对话历史      │  │ • 长期文档存储   │ │
-│  │ • 直接嵌入上下文  │  │ • 向量索引      │  │ • 语义搜索      │ │
-│  │ • 动态编辑       │  │ • 自动摘要      │  │ • 标签分类      │ │
-│  │ • 版本控制       │  │ • 时间序列      │  │ • 混合检索      │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-#### 1. 核心记忆（Core Memory）
-
-**特性**：
-- **块状内存结构**：将信息组织成可管理的内存块
-- **上下文嵌入**：直接包含在LLM的上下文窗口中
-- **动态编辑**：支持实时修改和更新
-- **自我编辑工具**：代理可以自主修改自己的核心记忆
-
-**实现机制**：
-```python
-class Memory(BaseModel, validate_assignment=True):
-    blocks: List[Block] = Field(..., description="内存块列表")
-    
-    def compile(self, tool_usage_rules=None, sources=None, max_files_open=None) -> str:
-        """根据代理类型选择渲染策略"""
-        if self.agent_type in ("react_agent", "workflow_agent"):
-            return self._render_memory_blocks_standard()
-        else:
-            return self._render_memory_blocks_line_numbered()
-```
-
-**核心工具**：
-- `core_memory_append` - 追加内容到内存块
-- `core_memory_replace` - 替换内存块内容
-- `core_memory_update` - 更新内存块信息
-
-#### 2. 回忆记忆（Recall Memory）
-
-**特性**：
-- **对话历史存储**：保存所有交互记录
-- **向量索引**：支持语义搜索和检索
-- **自动压缩**：当历史过长时自动摘要
-- **时间序列**：按时间组织的信息流
-
-**压缩策略**：
-```python
-def summarize_messages(agent_state, message_sequence_to_summarize, actor):
-    """递归摘要算法"""
-    if summary_input_tkns > context_window_threshold:
-        # 递归分割大文本
-        cutoff = int(len(message_sequence_to_summarize) * trunc_ratio)
-        return [
-            summarize_messages(message_sequence_to_summarize[:cutoff])
-        ] + message_sequence_to_summarize[cutoff:]
-```
-
-#### 3. 档案记忆（Archival Memory）
-
-**特性**：
-- **长期存储**：持久化大量信息
-- **多模态支持**：文本、文档、代码等
-- **混合检索**：文本+语义双重搜索
-- **标签系统**：结构化信息分类
-
-**搜索机制**：
-```python
-def conversation_search(self, query, roles=None, limit=None, 
-                       start_date=None, end_date=None):
-    """文本+语义相似度混合搜索"""
-    return self.message_manager.list_messages_for_agent(
-        agent_id=self.agent_state.id,
-        query_text=query,
-        roles=roles,
-        limit=limit,
-    )
-```
-
-### LLM操作系统概念
-
-Letta实现了MemGPT论文中提出的"LLM操作系统"概念：
-
-#### 1. 上下文工程
-
-**动态上下文窗口管理**：
-```python
-class ContextWindowOverview(BaseModel):
-    context_window_size_max: int           # 最大上下文窗口
-    context_window_size_current: int       # 当前使用量
-    num_tokens_core_memory: int           # 核心记忆占用
-    num_tokens_summary_memory: int        # 摘要记忆占用
-    num_tokens_functions_definitions: int  # 函数定义占用
-```
-
-**自适应优化**：
-- 实时监控令牌使用情况
-- 智能压缩过长的上下文
-- 优先保留关键信息
-- 动态调整内容结构
-
-#### 2. 自我编辑能力
-
-**代理可以自主管理自己的记忆**：
-- 检索相关信息
-- 更新记忆内容
-- 删除过时信息
-- 重组记忆结构
-
-#### 3. 工具生态系统
-
-**Functions as Tools**：
-- 内存管理工具
-- 信息检索工具
-- 文件操作工具
-- 外部集成工具
-
-### 与其他框架对比
-
-#### Letta vs LangChain
-
-| 特性 | Letta | LangChain |
-|------|-------|-----------|
-| **记忆系统** | ✅ 原生三层记忆 | ⚠️ 需要自行实现 |
-| **持久化存储** | ✅ 完整数据库支持 | ⚠️ 依赖外部存储 |
-| **多租户架构** | ✅ 企业级支持 | ❌ 缺少 |
-| **流式处理** | ✅ 原生支持 | ✅ 支持 |
-| **学习曲线** | ⚠️ 较陡 | ✅ 平缓 |
-
-#### Letta vs LlamaIndex
-
-| 特性 | Letta | LlamaIndex |
-|------|-------|------------|
-| **代理框架** | ✅ 完整Agent实现 | ⚠️ 专注RAG |
-| **工具集成** | ✅ 丰富生态系统 | ⚠️ 基础支持 |
-| **工作流支持** | ✅ Temporal集成 | ❌ 缺少 |
-| **多LLM支持** | ✅ 统一接口 | ✅ 广泛支持 |
-| **数据连接器** | ⚠️ 基础 | ✅ 丰富 |
-
-### 生产级特性
-
-#### 1. 分布式架构
-- **Temporal工作流**：分布式任务调度和故障恢复
-- **水平扩展**：支持多实例部署
-- **负载均衡**：智能请求分发
-
-#### 2. 企业级功能
-- **多租户隔离**：组织和项目级别的数据隔离
-- **权限管理**：细粒度的访问控制
-- **监控追踪**：OpenTelemetry集成
-- **容错处理**：完整的错误处理机制
-
-#### 3. 性能优化
-- **异步处理**：全栈异步架构
-- **缓存机制**：Redis和内存缓存
-- **批量操作**：数据库和API批量处理
-- **连接池**：数据库和HTTP连接池
-
-### 使用场景建议
-
-Letta特别适合以下场景：
-
-1. **长期对话应用**：需要记住用户历史和偏好的聊天机器人
-2. **个人助手**：需要持续学习和适应用户习惯的AI助手
-3. **研究助手**：需要处理大量文档和知识的AI系统
-4. **多代理协作**：需要多个AI代理协作的复杂系统
-5. **企业级应用**：需要高可用性和扩展性的生产环境
-
-## 架构概览
-
-Letta是一个构建有状态AI代理的平台，核心功能包括：
-
-### 核心组件
-- **Agent系统** (`letta/agents/`) - 实现有状态代理的核心逻辑
-  - `letta_agent.py` - 主要的代理实现
-  - `agent_loop.py` - 代理循环逻辑
-  - `temporal/` - 使用Temporal进行工作流管理
-
-- **记忆管理** (`letta/memory.py`) - 实现分层记忆系统
-  - Memory blocks作为上下文内记忆
-  - 向量数据库用于上下文外记忆
-
-- **函数/工具系统** (`letta/functions/`) - 代理可调用的工具
-  - `function_sets/` - 预定义的工具集
-  - 支持MCP (Model Context Protocol) 工具
-
-- **LLM接口** (`letta/llm_api/`) - 支持多个LLM提供商
-  - OpenAI, Anthropic, Azure, Bedrock等
-  - 新增 Kimi (Moonshot AI) 和 Zhipu AI (智谱AI) 支持
-  - 统一的API接口
-
-- **数据持久化** (`letta/orm/`) - 数据库模型和操作
-  - 使用SQLAlchemy ORM
-  - 支持Postgres和SQLite
-
-### 服务器架构
-- **REST API** (`letta/server/rest_api/`) - 主要的HTTP API服务器
-- **WebSocket支持** - 流式响应支持
-- **FastAPI** 作为后端框架
-
-### 代理特性
-- **记忆层次结构** - 上下文内vs上下文外记忆
-- **多代理共享记忆** - 多个代理可共享记忆块
-- **睡眠时间代理** - 后台运行的记忆管理代理
-- **长期运行代理** - 支持长时间运行的任务
-
-## 新增功能：Kimi 和 Zhipu AI 支持
-
-### Kimi (Moonshot AI) 集成
-
-Letta 现在支持 Kimi (Moonshot AI) 模型，通过其 OpenAI 兼容的 API 接口。
-
-#### 支持的 Kimi 模型
-- `moonshot-v1-8k` - 8K 上下文窗口
-- `moonshot-v1-32k` - 32K 上下文窗口
-- `moonshot-v1-128k` - 128K 上下文窗口
-- `kimi-k2-preview` - Kimi K2 预览版
-
-#### Kimi 配置
-在 `.env` 文件中添加您的 Kimi API 密钥：
-```
-KIMI_API_KEY=your_kimi_api_key_here
-```
-
-或者在环境中设置：
-```bash
-export KIMI_API_KEY="your_kimi_api_key_here"
-```
-
-### Zhipu AI (智谱AI) 集成
-
-Letta 现在支持 Zhipu AI (智谱AI) 模型，通过其 OpenAI 兼容的 API 接口。
-
-#### 支持的 Zhipu AI 模型
-- `glm-4` - 基础版 GLM-4 模型
-- `glm-4-plus` - 增强版 GLM-4 模型
-- `glm-4-flash` - 快速版 GLM-4 模型
-- `glm-4-air` - 平衡版 GLM-4 模型
-- `glm-4-airx` - 高性能版 GLM-4 模型
-
-#### Zhipu AI 配置
-在 `.env` 文件中添加您的 Zhipu AI API 密钥：
-```
-ZHIPU_API_KEY=your_zhipu_api_key_here
-```
-
-或者在环境中设置：
-```bash
-export ZHIPU_API_KEY="your_zhipu_api_key_here"
-```
-
-### 使用示例
-
-#### Python SDK 示例
-```
-from letta_client import Letta
-
-client = Letta(token="LETTA_API_KEY")
-
-# 使用 Kimi 模型创建代理
-kimi_agent = client.agents.create(
-    model="kimi/moonshot-v1-32k",
-    embedding="openai/text-embedding-3-small",
-    memory_blocks=[
-        {
-          "label": "human",
-          "value": "用户喜欢编程和AI技术"
-        },
-        {
-          "label": "persona",
-          "value": "我是你的AI助手，可以帮助你解答技术问题"
-        }
-    ],
-    tools=["web_search", "run_code"]
-)
-
-# 使用 Zhipu AI 模型创建代理
-zhipu_agent = client.agents.create(
-    model="zhipu/glm-4-plus",
-    embedding="openai/text-embedding-3-small",
-    memory_blocks=[
-        {
-          "label": "human",
-          "value": "用户喜欢编程和AI技术"
-        },
-        {
-          "label": "persona",
-          "value": "我是你的AI助手，可以帮助你解答技术问题"
-        }
-    ],
-    tools=["web_search", "run_code"]
-)
-```
-
-## 贾维斯增强功能开发指南
-
-### 1. 国内模型集成开发
-
-#### 支持的国内模型
-- Kimi (Moonshot AI)
-- Zhipu AI (智谱AI)
-- Qwen (通义千问) - 计划中
-- ERNIE Bot (文心一言) - 计划中
-- Baichuan (百川) - 计划中
-
-#### 模型适配器开发
-要添加新的国内模型支持，请遵循以下步骤：
-
-1. 在`letta/schemas/enums.py`中的`ProviderType`枚举中添加新的提供商类型
-2. 在`letta/settings.py`中添加API密钥配置
-3. 在`letta/llm_api/`目录中创建新的客户端实现
-4. 更新`letta/llm_api/llm_client.py`中的工厂方法
-
-#### 示例：添加新模型支持
-```
-# 在 enums.py 中添加
-class ProviderType(str, Enum):
-    # ... existing providers ...
-    qwen = "qwen"  # 新增通义千问支持
-
-# 在 settings.py 中添加
-class ModelSettings(BaseSettings):
-    # ... existing settings ...
-    qwen_api_key: Optional[str] = None
-    qwen_base_url: str = "https://dashscope.aliyuncs.com/api/v1"
-    
-# 创建 qwen_client.py
-class QwenClient(OpenAIClient):
-    def _prepare_client_kwargs(self, llm_config: LLMConfig) -> dict:
-        api_key = model_settings.qwen_api_key or os.environ.get("QWEN_API_KEY")
-        base_url = llm_config.model_endpoint or model_settings.qwen_base_url
-        
-        if not api_key:
-            raise ValueError("Qwen API key is required.")
-            
-        kwargs = {"api_key": api_key, "base_url": base_url}
-        return kwargs
-```
-
-### 2. MCP工具生态系统扩展
-
-#### 已支持的MCP工具
-- 文件系统操作工具
-- 网络搜索工具
-- 代码执行工具
-- 本地应用控制工具
-
-#### 自定义MCP工具开发
-要开发自定义MCP工具，请遵循以下步骤：
-
-1. 创建MCP工具描述JSON文件
-2. 实现工具的后端逻辑
-3. 在ADE中注册工具
-4. 测试工具功能
-
-#### 示例：创建简单的MCP工具
-```
-{
-  "name": "get_current_time",
-  "description": "获取当前系统时间",
-  "inputSchema": {
-    "type": "object",
-    "properties": {}
-  }
-}
-```
-
-```
-# 工具实现
-import datetime
-
-def get_current_time() -> str:
-    """获取当前系统时间"""
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-```
-
-### 3. 本地贾维斯功能开发
-
-#### 记忆增强模块
-- 个人偏好学习模块
-- 习惯模式识别模块
-- 长期记忆优化模块
-
-#### 本地工具开发
-- 系统控制工具
-- 文件管理工具
-- 应用集成工具
-
-#### 离线功能实现
-- 本地向量数据库
-- 离线索引构建
-- 离线模型支持
+## 发布计划
+
+### Alpha版本 (第4周)
+- **目标**: 核心功能可用，基础国内模型支持
+- **包含功能**:
+  - Kimi和Zhipu AI模型支持
+  - 基础MCP工具集（文件操作、时间获取、网络搜索）
+  - 基本的Letta代理功能
+- **目标用户**: 开发者和早期测试用户
+- **发布渠道**: GitHub Releases
+
+### Beta版本 (第8周)
+- **目标**: 功能完整，稳定性提升
+- **包含功能**:
+  - 完整的国内模型支持（Qwen、ERNIE Bot等）
+  - 丰富的MCP工具生态系统
+  - 记忆增强模块
+  - 离线功能支持
+- **目标用户**: 公开测试用户
+- **发布渠道**: GitHub Releases, Docker Hub
+
+### 正式版本 (第10周)
+- **目标**: 生产就绪，文档完善
+- **包含功能**:
+  - 所有计划功能
+  - 完整的文档和示例
+  - 可视化管理界面
+  - 性能优化和错误处理
+- **目标用户**: 所有用户
+- **发布渠道**: GitHub Releases, Docker Hub, PyPI
+
+## 部署和安装
+
+### 系统要求
+- Python 3.11+
+- uv包管理器
+- PostgreSQL (可选，用于持久化存储)
+- Docker (可选，用于容器化部署)
+
+### 安装步骤
+1. 克隆项目仓库
+2. 安装依赖: `uv sync --all-extras`
+3. 配置环境变量 (API密钥等)
+4. 启动服务: `uv run letta server`
+
+### 配置说明
+- `.env` 文件包含所有必要的配置项
+- 支持通过环境变量覆盖配置
+- 提供Docker Compose配置用于容器化部署
+
+## 版本管理
+
+### 版本号格式
+采用语义化版本控制 (SemVer): `主版本号.次版本号.修订号`
+
+### 分支策略
+- `main`: 稳定版本分支
+- `develop`: 开发版本分支
+- `feature/*`: 功能开发分支
+- `hotfix/*`: 紧急修复分支
+
+## 社区和贡献
+
+### 贡献指南
+- 遵循项目的代码风格和规范
+- 提交Pull Request前进行充分测试
+- 提供清晰的提交信息和变更说明
+
+### 问题反馈
+- 使用GitHub Issues报告问题
+- 提供详细的环境信息和复现步骤
+- 标记问题的优先级和类型
 
 ## 开发注意事项
 

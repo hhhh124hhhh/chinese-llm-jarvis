@@ -93,6 +93,20 @@ class LLMClient:
                     put_inner_thoughts_first=put_inner_thoughts_first,
                     actor=actor,
                 )
+            case ProviderType.kimi:
+                from letta.llm_api.kimi_client import KimiClient
+
+                return KimiClient(
+                    put_inner_thoughts_first=put_inner_thoughts_first,
+                    actor=actor,
+                )
+            case ProviderType.zhipu:
+                from letta.llm_api.zhipu_client import ZhipuClient
+
+                return ZhipuClient(
+                    put_inner_thoughts_first=put_inner_thoughts_first,
+                    actor=actor,
+                )
             case _:
                 from letta.llm_api.openai_client import OpenAIClient
 

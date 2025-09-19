@@ -11,6 +11,7 @@ class ProviderType(str, Enum):
     google_vertex = "google_vertex"
     groq = "groq"
     hugging_face = "hugging-face"
+    kimi = "kimi"  # Kimi (Moonshot AI)
     letta = "letta"
     lmstudio_openai = "lmstudio_openai"
     mistral = "mistral"
@@ -19,6 +20,7 @@ class ProviderType(str, Enum):
     together = "together"
     vllm = "vllm"
     xai = "xai"
+    zhipu = "zhipu"  # Zhipu AI (智谱AI)
 
 
 class AgentType(str, Enum):

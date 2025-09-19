@@ -1,0 +1,25 @@
+{
+  "name": "letta-jarvis",
+  "version": "0.1.0",
+  "description": "本地化智能助手系统，具备持续记忆、个性化服务和智能任务执行能力",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"uv run letta server --type rest --port 8283 --reload\" \"cd frontend && npm run dev\"",
+    "build": "cd frontend && npm run build",
+    "start": "uv run letta server --type rest --port 8283",
+    "setup": "npm install && cd frontend && npm install",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "jarvis",
+    "letta",
+    "llm"
+  ],
+  "author": "Letta Team",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}

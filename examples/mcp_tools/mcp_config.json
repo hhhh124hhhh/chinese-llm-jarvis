@@ -1,0 +1,12 @@
+{
+  "current_time": {
+    "type": "stdio",
+    "command": "python",
+    "args": ["-m", "examples.mcp_tools.get_current_time"]
+  },
+  "file_operations": {
+    "type": "stdio",
+    "command": "python",
+    "args": ["-m", "examples.mcp_tools.file_operations"]
+  }
+}

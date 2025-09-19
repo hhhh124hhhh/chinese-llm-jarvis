@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  letta-jarvis:
+    build: .
+    container_name: letta-jarvis
+    ports:
+      - "8283:8283"  # API端口
+      - "5432:5432"  # PostgreSQL端口
+      - "4317:4317"  # OTLP gRPC端口
+      - "4318:4318"  # OTLP HTTP端口
+    environment:
+      # 数据库配置
+      - LETTA_PG_DB=letta
+      - LETTA_PG_USER=letta
+      - LETTA_PG_PASSWORD=letta
+      - LETTA_PG_HOST=localhost
+      - LETTA_PG_PORT=5432
+      
+      # 国内大模型API密钥（请替换为实际的API密钥）
+      - KIMI_API_KEY=your_kimi_api_key_here
+      - ZHIPU_API_KEY=your_zhipu_api_key_here
+      - QWEN_API_KEY=your_qwen_api_key_here
+      - ERNIE_API_KEY=your_ernie_api_key_here
+      
+      # 其他配置
+      - LETTA_ENVIRONMENT=PROD
+      - COMPOSIO_DISABLE_VERSION_CHECK=true
+      
+    volumes:
+      - ./data:/app/data  # 持久化数据
+      - ./logs:/app/logs  # 日志文件
+      - ./models:/app/models  # 本地模型（如果使用）
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: letta-postgres
+    environment:
+      - POSTGRES_USER=letta
+      - POSTGRES_PASSWORD=letta
+      - POSTGRES_DB=letta
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5433:5432"  # 避免与主机PostgreSQL冲突
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: letta-otel-collector
+    command: ["--config=/etc/otel/config-file.yaml"]
+    volumes:
+      - ./otel/otel-collector-config-file.yaml:/etc/otel/config-file.yaml
+      - ./logs:/app/logs
+    ports:
+      - "4317:4317"  # OTLP gRPC接收端口
+      - "4318:4318"  # OTLP HTTP接收端口
+      - "8888:8888"  # Prometheus指标端口
+      - "8889:8889"  # Prometheus指标端口
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

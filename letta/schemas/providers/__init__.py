@@ -9,6 +9,7 @@ from .deepseek import DeepSeekProvider
 from .google_gemini import GoogleAIProvider
 from .google_vertex import GoogleVertexProvider
 from .groq import GroqProvider
+from .kimi import KimiProvider
 from .letta import LettaProvider
 from .lmstudio import LMStudioOpenAIProvider
 from .mistral import MistralProvider
@@ -17,6 +18,7 @@ from .openai import OpenAIProvider
 from .together import TogetherProvider
 from .vllm import VLLMProvider
 from .xai import XAIProvider
+from .zhipu import ZhipuProvider
 
 __all__ = [
     # Base classes
@@ -34,6 +36,7 @@ __all__ = [
     "GoogleAIProvider",
     "GoogleVertexProvider",
     "GroqProvider",
+    "KimiProvider",
     "LettaProvider",
     "LMStudioOpenAIProvider",
     "MistralProvider",
@@ -42,4 +45,5 @@ __all__ = [
     "TogetherProvider",
     "VLLMProvider",  # Replaces ChatCompletions and Completions
     "XAIProvider",
+    "ZhipuProvider",
 ]

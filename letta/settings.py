@@ -164,6 +164,14 @@ class ModelSettings(BaseSettings):
     openllm_auth_type: Optional[str] = None
     openllm_api_key: Optional[str] = None
 
+    # kimi (Moonshot AI)
+    kimi_api_key: Optional[str] = None
+    kimi_base_url: str = "https://api.moonshot.cn/v1"
+
+    # zhipu (智谱AI)
+    zhipu_api_key: Optional[str] = None
+    zhipu_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
+
 
 env_cors_origins = os.getenv("ACCEPTABLE_ORIGINS")
 
