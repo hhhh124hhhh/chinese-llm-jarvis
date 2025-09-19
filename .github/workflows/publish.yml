@@ -1,0 +1,31 @@
+name: 发布
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: 设置Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: 安装uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+    - name: 构建包
+      run: |
+        uv build
+        
+    - name: 发布到PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
