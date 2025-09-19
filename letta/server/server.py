@@ -236,14 +236,8 @@ class SyncServer(Server):
         )
 
         # Managers that depend on the managers above
-        self.tool_execution_manager = ToolExecutionManager(
-            message_manager=self.message_manager,
-            agent_manager=self.agent_manager,
-            block_manager=self.block_manager,
-            job_manager=self.job_manager,
-            passage_manager=self.passage_manager,
-            actor=None  # Will be set when needed
-        )
+        # ToolExecutionManager will be created on-demand with the appropriate actor
+        self.tool_execution_manager = None
 
         # collect providers (always has Letta as a default)
         self._enabled_providers: List[Provider] = [LettaProvider(name="letta", provider_type=ProviderType.letta, provider_category=ProviderCategory.base, id=None, api_key=None, base_url=None, access_key=None, region=None, api_version=None, organization_id=None, updated_at=None)]
@@ -518,9 +512,9 @@ class SyncServer(Server):
         mcp_server_configs = self.get_mcp_servers()
 
         for server_name, server_config in mcp_server_configs.items():
-            if server_config.type == MCPServerType.SSE:
+            if isinstance(server_config, SSEServerConfig):
                 self.mcp_clients[server_name] = AsyncSSEMCPClient(server_config)
-            elif server_config.type == MCPServerType.STDIO:
+            elif isinstance(server_config, StdioServerConfig):
                 self.mcp_clients[server_name] = AsyncStdioMCPClient(server_config)
             else:
                 raise ValueError(f"Invalid MCP server config: {server_config}")
@@ -570,11 +564,11 @@ class SyncServer(Server):
                 raise KeyError(f"Agent (user={actor.id}, agent={agent_id}) is not loaded")
 
             # Determine whether or not to token stream based on the capability of the interface
-            token_streaming = letta_agent.interface.streaming_mode if hasattr(letta_agent.interface, "streaming_mode") else False
+            token_streaming = getattr(letta_agent.interface, "streaming_mode", False)
 
             logger.debug("Starting agent step")
             if interface:
-                metadata = interface.metadata if hasattr(interface, "metadata") else None
+                metadata = getattr(interface, "metadata", None)
             else:
                 metadata = None
 
@@ -594,8 +588,11 @@ class SyncServer(Server):
             raise
         finally:
             logger.debug("Calling step_yield()")
-            if letta_agent:
+            if letta_agent and hasattr(letta_agent.interface, "step_yield"):
                 letta_agent.interface.step_yield()
+            elif letta_agent:
+                # Fallback: do nothing if step_yield is not available
+                pass
 
         return usage_stats
 
@@ -619,28 +616,31 @@ class SyncServer(Server):
 
         elif command.lower() == "attach":
             # Different from CLI, we extract the data source name from the command
-            command = command.strip().split()
+            command_parts = command.strip().split()
             try:
-                data_source = int(command[1])
+                data_source = int(command_parts[1])
             except:
                 raise ValueError(command)
 
             # attach data to agent from source
-            letta_agent.attach_source(
-                user=self.user_manager.get_user_by_id(user_id=user_id),
-                source_id=data_source,
-                source_manager=self.source_manager,
-                agent_manager=self.agent_manager,
-            )
+            if hasattr(letta_agent, "attach_source"):
+                letta_agent.attach_source(
+                    user=self.user_manager.get_user_by_id(user_id=user_id),
+                    source_id=data_source,
+                    source_manager=self.source_manager,
+                    agent_manager=self.agent_manager,
+                )
 
         elif command.lower() == "dump" or command.lower().startswith("dump "):
             # Check if there's an additional argument that's an integer
-            command = command.strip().split()
-            amount = int(command[1]) if len(command) > 1 and command[1].isdigit() else 0
+            command_parts = command.strip().split()
+            amount = int(command_parts[1]) if len(command_parts) > 1 and command_parts[1].isdigit() else 0
             if amount == 0:
-                letta_agent.interface.print_messages(letta_agent.messages, dump=True)
+                if hasattr(letta_agent.interface, "print_messages"):
+                    letta_agent.interface.print_messages(letta_agent.messages, dump=True)
             else:
-                letta_agent.interface.print_messages(letta_agent.messages[-min(amount, len(letta_agent.messages)) :], dump=True)
+                if hasattr(letta_agent.interface, "print_messages"):
+                    letta_agent.interface.print_messages(letta_agent.messages[-min(amount, len(letta_agent.messages)) :], dump=True)
 
         elif command.lower() == "dumpraw":
             letta_agent.interface.print_messages_raw(letta_agent.messages)
@@ -651,8 +651,8 @@ class SyncServer(Server):
 
         elif command.lower() == "pop" or command.lower().startswith("pop "):
             # Check if there's an additional argument that's an integer
-            command = command.strip().split()
-            pop_amount = int(command[1]) if len(command) > 1 and command[1].isdigit() else 3
+            command_parts = command.strip().split()
+            pop_amount = int(command_parts[1]) if len(command_parts) > 1 and command_parts[1].isdigit() else 3
             n_messages = len(letta_agent.messages)
             MIN_MESSAGES = 2
             if n_messages <= MIN_MESSAGES:
@@ -2045,15 +2045,6 @@ class SyncServer(Server):
                 function_args=tool_args,
                 tool=tool,
             )
-        # Managers that depend on the managers above
-        self.tool_execution_manager = ToolExecutionManager(
-            message_manager=self.message_manager,
-            agent_manager=self.agent_manager,
-            block_manager=self.block_manager,
-            job_manager=self.job_manager,
-            passage_manager=self.passage_manager,
-            actor=None  # Will be set when needed
-        )
 
             return ToolReturnMessage(
                 id="null",
