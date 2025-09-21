@@ -128,6 +128,19 @@ async def lifespan(app_: FastAPI):
     db_registry.initialize_async()
     logger.info(f"[Worker {worker_id}] Database connections initialized")
 
+    # Create default organization and user if they don't exist
+    logger.info(f"[Worker {worker_id}] Creating default organization and user if they don't exist")
+    try:
+        # Create the default organization and get its ID
+        default_org = await server.organization_manager.create_default_organization_async()
+        org_id = default_org.id
+        
+        # Create the default user using the organization ID
+        await server.user_manager.create_default_actor_async(org_id=org_id)
+        logger.info(f"[Worker {worker_id}] Default organization and user created or already exist")
+    except Exception as e:
+        logger.error(f"[Worker {worker_id}] Failed to create default organization and user: {e}", exc_info=True)
+
     if should_use_pinecone():
         if settings.upsert_pinecone_indices:
             logger.info(f"[Worker {worker_id}] Upserting pinecone indices: {get_pinecone_indices()}")
@@ -139,7 +152,6 @@ async def lifespan(app_: FastAPI):
         logger.info(f"[Worker {worker_id}] Disabled pinecone")
 
     logger.info(f"[Worker {worker_id}] Starting scheduler with leader election")
-    global server
     try:
         await start_scheduler_with_leader_election(server)
         logger.info(f"[Worker {worker_id}] Scheduler initialization completed")

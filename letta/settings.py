@@ -214,6 +214,10 @@ class Settings(BaseSettings):
     debug: Optional[bool] = False
     cors_origins: Optional[list] = cors_origins
     environment: Optional[str] = Field(default=None, description="Application environment (PRODUCTION, DEV, etc.)")
+    
+    # SQLite configuration
+    storage_type: Optional[str] = Field(default="postgres", description="Storage type: sqlite or postgres")
+    sqlite_db_path: Optional[str] = Field(default="~/.letta/sqlite.db", description="SQLite database path")
 
     # SSE Streaming keepalive settings
     enable_keepalive: bool = Field(True, description="Enable keepalive messages in SSE streams to prevent timeouts")
@@ -343,6 +347,8 @@ class Settings(BaseSettings):
 
     @property
     def database_engine(self) -> DatabaseChoice:
+        if self.storage_type == "sqlite":
+            return DatabaseChoice.SQLITE
         return DatabaseChoice.POSTGRES if self.letta_pg_uri_no_default else DatabaseChoice.SQLITE
 
     @property

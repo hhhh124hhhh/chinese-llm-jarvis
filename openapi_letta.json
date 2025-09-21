@@ -21335,7 +21335,7 @@
         "operationId": "get_total_storage_size",
         "parameters": [
           {
-            "name": "storage-unit",
+            "name": "storage_unit",
             "in": "header",
             "required": false,
             "schema": {
@@ -25845,6 +25845,9 @@
             ],
             "title": "Temperature"
           },
+          "text": {
+            "$ref": "#/components/schemas/Text"
+          },
           "tool_choice": {
             "anyOf": [
               {
@@ -26323,6 +26326,9 @@
               }
             ],
             "title": "Temperature"
+          },
+          "text": {
+            "$ref": "#/components/schemas/Text"
           },
           "tool_choice": {
             "anyOf": [
@@ -36531,6 +36537,28 @@
         ],
         "title": "TerminalToolRule",
         "description": "Represents a terminal tool rule configuration where if this tool gets called, it must end the agent loop."
+      },
+      "Text": {
+        "properties": {
+          "verbosity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verbosity"
+          }
+        },
+        "type": "object",
+        "title": "Text"
       },
       "TextContent": {
         "properties": {
