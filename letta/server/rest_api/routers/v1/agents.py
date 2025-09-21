@@ -1162,6 +1162,7 @@ async def send_message(
         "xai",
         "groq",
         "deepseek",
+        "kimi",
     ]
 
     # Create a new run for execution tracking
@@ -1295,6 +1296,7 @@ async def send_message_streaming(
         "xai",
         "groq",
         "deepseek",
+        "kimi",
     ]
     model_compatible_token_streaming = agent.llm_config.model_endpoint_type in ["anthropic", "openai", "bedrock", "deepseek"]
 
@@ -1565,6 +1567,7 @@ async def _process_message_background(
             "xai",
             "groq",
             "deepseek",
+            "kimi",
         ]
         if agent_eligible and model_compatible:
             agent_loop = AgentLoop.load(agent_state=agent, actor=actor)
@@ -1759,6 +1762,7 @@ async def preview_raw_payload(
         "xai",
         "groq",
         "deepseek",
+        "kimi",
     ]
 
     if agent_eligible and model_compatible:
@@ -1803,6 +1807,7 @@ async def summarize_agent_conversation(
         "xai",
         "groq",
         "deepseek",
+        "kimi",
     ]
 
     if agent_eligible and model_compatible:
