@@ -113,6 +113,21 @@ class KimiProvider(Provider):
             # Kimi API returns context_length in the model object
             context_window = model.get("context_length", 8192)  # Default to 8k if not specified
             
+            # For newer Kimi K2 models, we may need to adjust put_inner_thoughts_in_kwargs
+            put_inner_thoughts_in_kwargs = True
+            # For K2 series models, set put_inner_thoughts_in_kwargs to False as they may have different behavior
+            # For all Kimi models, we should set put_inner_thoughts_in_kwargs to False to ensure proper tool calling
+            if "k2" in model_name.lower() or "thinking" in model_name.lower():
+                put_inner_thoughts_in_kwargs = False
+            # Also set to False for all Kimi models to ensure proper tool calling behavior
+            elif model_name.startswith("kimi-") or model_name.startswith("moonshot-"):
+                put_inner_thoughts_in_kwargs = False
+                
+            # Set max_reasoning_tokens for K2 series models
+            max_reasoning_tokens = 0
+            if "k2" in model_name.lower() or "thinking" in model_name.lower():
+                max_reasoning_tokens = 1024
+                
             configs.append(
                 LLMConfig(
                     model=model_name,
@@ -123,12 +138,12 @@ class KimiProvider(Provider):
                     provider_name=self.name,
                     provider_category=self.provider_category,
                     model_wrapper=None,
-                    put_inner_thoughts_in_kwargs=True,
+                    put_inner_thoughts_in_kwargs=put_inner_thoughts_in_kwargs,
                     temperature=0.7,
                     max_tokens=None,
                     enable_reasoner=True,
                     reasoning_effort=None,
-                    max_reasoning_tokens=0,
+                    max_reasoning_tokens=max_reasoning_tokens,
                     frequency_penalty=None,
                     compatibility_type=None,
                     verbosity=None,
@@ -158,6 +173,21 @@ class KimiProvider(Provider):
         
         configs = []
         for model_name, context_window in kimi_models.items():
+            # For newer Kimi K2 models, we may need to adjust put_inner_thoughts_in_kwargs
+            put_inner_thoughts_in_kwargs = True
+            # For K2 series models, set put_inner_thoughts_in_kwargs to False as they may have different behavior
+            # For all Kimi models, we should set put_inner_thoughts_in_kwargs to False to ensure proper tool calling
+            if "k2" in model_name.lower() or "thinking" in model_name.lower():
+                put_inner_thoughts_in_kwargs = False
+            # Also set to False for all Kimi models to ensure proper tool calling behavior
+            elif model_name.startswith("kimi-") or model_name.startswith("moonshot-"):
+                put_inner_thoughts_in_kwargs = False
+                
+            # Set max_reasoning_tokens for K2 series models
+            max_reasoning_tokens = 0
+            if "k2" in model_name.lower() or "thinking" in model_name.lower():
+                max_reasoning_tokens = 1024
+                
             configs.append(
                 LLMConfig(
                     model=model_name,
@@ -168,12 +198,12 @@ class KimiProvider(Provider):
                     provider_name=self.name,
                     provider_category=self.provider_category,
                     model_wrapper=None,
-                    put_inner_thoughts_in_kwargs=True,
+                    put_inner_thoughts_in_kwargs=put_inner_thoughts_in_kwargs,
                     temperature=0.7,
                     max_tokens=None,
                     enable_reasoner=True,
                     reasoning_effort=None,
-                    max_reasoning_tokens=0,
+                    max_reasoning_tokens=max_reasoning_tokens,
                     frequency_penalty=None,
                     compatibility_type=None,
                     verbosity=None,
