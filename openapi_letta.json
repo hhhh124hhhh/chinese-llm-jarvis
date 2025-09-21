@@ -31447,7 +31447,8 @@
               "together",
               "bedrock",
               "deepseek",
-              "xai"
+              "xai",
+              "kimi"
             ],
             "title": "Model Endpoint Type",
             "description": "The endpoint type for the model."

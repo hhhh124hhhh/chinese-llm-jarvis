@@ -54,8 +54,6 @@ class KimiClient(OpenAIClient):
         return super().requires_auto_tool_choice(llm_config)
 
     def supports_structured_output(self, llm_config: LLMConfig) -> bool:
-        """Kimi supports structured output for most models"""
-        # Kimi K2 models support structured output
-        if llm_config.model and "k2" in llm_config.model.lower():
-            return True
-        return super().supports_structured_output(llm_config)
+        """Kimi does not reliably support structured output"""
+        # Kimi models do not reliably support structured output
+        return False

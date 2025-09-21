@@ -109,6 +109,10 @@ async def sse_async_generator(
         if usage_task is not None:
             try:
                 usage = await usage_task
+                # Handle case where usage is None (e.g., for Kimi models)
+                if usage is None:
+                    # Create a default usage statistics object
+                    usage = LettaUsageStatistics()
                 # Double-check the type
                 if not isinstance(usage, LettaUsageStatistics):
                     err_msg = f"Expected LettaUsageStatistics, got {type(usage)}"

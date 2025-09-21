@@ -18,6 +18,7 @@
   - 在 LLMClient 工厂方法中添加 Kimi 和 Zhipu 支持
   - 在 ModelSettings 中添加 kimi_base_url 和 zhipu_base_url 配置
   - 实现完整的模型列表获取功能 (KimiProvider 和 ZhipuProvider 类)
+  - 修复 KimiProvider K2 模型识别问题，完整支持 Kimi K2 系列模型
 
 #### 任务2: 添加更多国内模型支持
 - **状态**: 未开始
@@ -110,6 +111,7 @@
 - **目标**: 核心功能可用，基础国内模型支持
 - **包含功能**:
   - Kimi和Zhipu AI模型支持
+  - 完整的Kimi K2系列模型支持
   - 基础MCP工具集（文件操作、时间获取、网络搜索）
   - 基本的Letta代理功能
   - 完整的模型列表获取功能
@@ -271,6 +273,7 @@ echo "uv run letta server"
    - 实现通义千问(Qwen)支持
    - 实现文心一言(ERNIE Bot)支持
    - 优化模型切换和配置管理
+   - 完善Kimi K2模型的上下文窗口配置优化
 
 2. **增强MCP工具生态系统**:
    - 开发代码执行工具集
@@ -287,6 +290,11 @@ echo "uv run letta server"
    - 实现个人偏好学习模块
    - 开发习惯模式识别模块
    - 实现长期记忆优化模块
+
+2. **Kimi模型功能增强**:
+   - 实现Kimi模型的流式响应处理
+   - 优化Kimi模型的错误处理和重试机制
+   - 添加Kimi模型的性能监控和日志记录
 
 2. **本地工具开发**:
    - 开发系统控制工具

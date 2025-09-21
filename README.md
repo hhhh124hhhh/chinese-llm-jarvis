@@ -68,6 +68,13 @@ QWEN_API_KEY=your_qwen_api_key_here
 ERNIE_API_KEY=your_ernie_api_key_here
 ```
 
+### 问题诊断和解决
+如果在使用过程中遇到问题，可以参考以下文档进行诊断和解决：
+- [LETTA_PROCESS_FLOW.md](file:///d%3A/chinese-llm-jarvis/LETTA_PROCESS_FLOW.md) - Letta系统处理流程详解
+- [LETTA_TROUBLESHOOTING_GUIDE.md](file:///d%3A/chinese-llm-jarvis/LETTA_TROUBLESHOOTING_GUIDE.md) - Letta系统问题诊断与解决指南
+- [NATIVE_MODEL_IMPLEMENTATION.md](file:///d%3A/chinese-llm-jarvis/NATIVE_MODEL_IMPLEMENTATION.md) - Letta原生模型实现机制详解
+- [KIMI_K2_MODEL_INTEGRATION_SOLUTION.md](file:///d%3A/chinese-llm-jarvis/KIMI_K2_MODEL_INTEGRATION_SOLUTION.md) - Kimi K2模型集成解决方案
+
 ### 使用MCP工具
 ```python
 from letta_client import Letta
@@ -97,6 +104,8 @@ current_time_tool = client.tools.add_mcp_tool(
 - [x] 实现完整的模型列表获取功能，支持所有 Kimi 和 Zhipu 模型
 - [x] 修复了模型在前端不显示的问题，确保 API 正确返回模型列表
 - [x] 优化了模型配置，支持通过 .env 文件灵活配置 API 密钥
+- [x] 完善 Kimi K2 系列模型支持，确保所有 K2 模型都能被正确识别和使用
+- [x] 实现增强的错误处理机制，提供更友好的用户错误提示
 
 ### 启动指令优化
 为方便用户使用，项目提供了多种启动方式：
@@ -146,6 +155,8 @@ current_time_tool = client.tools.add_mcp_tool(
 - [x] 在 LLMClient 工厂方法中添加 Kimi 和 Zhipu 支持
 - [x] 在 ModelSettings 中添加 kimi_base_url 和 zhipu_base_url 配置
 - [x] 实现完整的模型列表获取功能
+- [x] 修复 KimiProvider K2 模型识别问题，完整支持 Kimi K2 系列模型
+- [x] 实现增强的错误处理机制，提供更友好的用户错误提示
 
 #### 任务2: 添加更多国内模型支持
 - [ ] 实现通义千问(Qwen)支持
@@ -201,8 +212,9 @@ current_time_tool = client.tools.add_mcp_tool(
 
 #### 任务2: 用户体验优化
 - [x] 实现现代化React前端界面
-- [ ] 提供使用文档和示例
+- [x] 提供使用文档和示例
 - [ ] 实现配置向导
+- [x] 创建问题诊断和解决指南
 
 #### 任务3: 部署和发布准备
 - [ ] 准备部署文档
