@@ -89,7 +89,7 @@ class SummarizerSettings(BaseSettings):
 
 
 class ModelSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=[".env", ".env.local"], extra="ignore")
 
     global_max_context_window_limit: int = 32000
 
